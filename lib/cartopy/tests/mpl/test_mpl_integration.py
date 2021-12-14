@@ -18,7 +18,7 @@ from cartopy.tests.mpl import MPL_VERSION
 
 @pytest.mark.natural_earth
 @pytest.mark.mpl_image_compare(filename='global_contour_wrap.png',
-                               style='mpl20')
+                               style='mpl20', tolerance=2.25)
 def test_global_contour_wrap_new_transform():
     ax = plt.axes(projection=ccrs.PlateCarree())
     ax.coastlines()
@@ -30,7 +30,7 @@ def test_global_contour_wrap_new_transform():
 
 @pytest.mark.natural_earth
 @pytest.mark.mpl_image_compare(filename='global_contour_wrap.png',
-                               style='mpl20')
+                               style='mpl20', tolerance=2.25)
 def test_global_contour_wrap_no_transform():
     ax = plt.axes(projection=ccrs.PlateCarree())
     ax.coastlines()
@@ -149,22 +149,6 @@ def test_global_hexbin_wrap_transform():
     return ax.figure
 
 
-@pytest.mark.mpl_image_compare(filename='global_map.png', tolerance=0.55)
-def test_global_map():
-    ax = plt.axes(projection=ccrs.Robinson())
-#    ax.coastlines()
-#    ax.gridlines(5)
-
-    ax.plot(-0.08, 51.53, 'o', transform=ccrs.PlateCarree())
-
-    ax.plot([-0.08, 132], [51.53, 43.17], color='red',
-            transform=ccrs.PlateCarree())
-
-    ax.plot([-0.08, 132], [51.53, 43.17], color='blue',
-            transform=ccrs.Geodetic())
-    return ax.figure
-
-
 @pytest.mark.filterwarnings("ignore:Unable to determine extent")
 @pytest.mark.natural_earth
 @pytest.mark.mpl_image_compare(filename='simple_global.png')
@@ -177,69 +161,54 @@ def test_simple_global():
 
 @pytest.mark.filterwarnings("ignore:Unable to determine extent")
 @pytest.mark.natural_earth
-@pytest.mark.mpl_image_compare(filename='multiple_projections5.png',
-                               tolerance=2.05)
-def test_multiple_projections():
-
-    projections = [ccrs.PlateCarree(),
-                   ccrs.Robinson(),
-                   ccrs.RotatedPole(pole_latitude=45, pole_longitude=180),
-                   ccrs.OSGB(approx=True),
-                   ccrs.TransverseMercator(approx=True),
-                   ccrs.Mercator(min_latitude=-85., max_latitude=85.),
-                   ccrs.LambertCylindrical(),
-                   ccrs.Miller(),
-                   ccrs.Gnomonic(),
-                   ccrs.Stereographic(),
-                   ccrs.NorthPolarStereo(),
-                   ccrs.SouthPolarStereo(),
-                   ccrs.Orthographic(),
-                   ccrs.Mollweide(),
-                   ccrs.InterruptedGoodeHomolosine(emphasis='land'),
-                   ccrs.EckertI(),
-                   ccrs.EckertII(),
-                   ccrs.EckertIII(),
-                   ccrs.EckertIV(),
-                   ccrs.EckertV(),
-                   ccrs.EckertVI(),
-                   ]
-
-    rows = np.ceil(len(projections) / 5).astype(int)
-
-    fig = plt.figure(figsize=(10, 2 * rows))
-    for i, prj in enumerate(projections, 1):
-        ax = fig.add_subplot(rows, 5, i, projection=prj)
-
-        ax.set_global()
-
-        ax.coastlines(resolution="110m")
-
-        ax.plot(-0.08, 51.53, 'o', transform=ccrs.PlateCarree())
-        ax.plot([-0.08, 132], [51.53, 43.17], color='red',
-                transform=ccrs.PlateCarree())
-        ax.plot([-0.08, 132], [51.53, 43.17], color='blue',
-                transform=prj.as_geodetic())
-
-    return fig
-
-
-@pytest.mark.natural_earth
-@pytest.mark.mpl_image_compare(filename='multiple_projections520.png')
-def test_multiple_projections_520():
-    # Test projections added in Proj 5.2.0.
+@pytest.mark.parametrize('proj', [
+    ccrs.EckertI,
+    ccrs.EckertII,
+    ccrs.EckertIII,
+    ccrs.EckertIV,
+    ccrs.EckertV,
+    ccrs.EckertVI,
+    ccrs.EqualEarth,
+    ccrs.Gnomonic,
+    pytest.param((ccrs.InterruptedGoodeHomolosine, dict(emphasis='land')),
+                 id='InterruptedGoodeHomolosine'),
+    ccrs.LambertCylindrical,
+    pytest.param((ccrs.Mercator, dict(min_latitude=-85, max_latitude=85)),
+                 id='Mercator'),
+    ccrs.Miller,
+    ccrs.Mollweide,
+    ccrs.NorthPolarStereo,
+    ccrs.Orthographic,
+    pytest.param((ccrs.OSGB, dict(approx=True)), id='OSGB'),
+    ccrs.PlateCarree,
+    ccrs.Robinson,
+    pytest.param((ccrs.RotatedPole,
+                  dict(pole_latitude=45, pole_longitude=180)),
+                 id='RotatedPole'),
+    ccrs.Stereographic,
+    ccrs.SouthPolarStereo,
+    pytest.param((ccrs.TransverseMercator, dict(approx=True)),
+                 id='TransverseMercator'),
+])
+@pytest.mark.mpl_image_compare(
+    tolerance=(2.61 if MPL_VERSION.release[:2] == (3, 1) else
+               0.97 if MPL_VERSION.release[:2] < (3, 5) else 0.5),
+    style='mpl20')
+def test_global_map(proj):
+    if isinstance(proj, tuple):
+        proj, kwargs = proj
+    else:
+        kwargs = {}
+    proj = proj(**kwargs)
 
     fig = plt.figure(figsize=(2, 2))
-    ax = fig.add_subplot(1, 1, 1, projection=ccrs.EqualEarth())
-
+    ax = fig.add_subplot(projection=proj)
     ax.set_global()
-
-    ax.coastlines()
+    ax.coastlines(resolution="110m")
 
     ax.plot(-0.08, 51.53, 'o', transform=ccrs.PlateCarree())
-
     ax.plot([-0.08, 132], [51.53, 43.17], color='red',
             transform=ccrs.PlateCarree())
-
     ax.plot([-0.08, 132], [51.53, 43.17], color='blue',
             transform=ccrs.Geodetic())
 
@@ -370,7 +339,7 @@ def test_pcolormesh_global_with_wrap2():
 
 @pytest.mark.natural_earth
 @pytest.mark.mpl_image_compare(filename='pcolormesh_global_wrap3.png',
-                               tolerance=1.39)
+                               tolerance=1.42)
 def test_pcolormesh_global_with_wrap3():
     nx, ny = 33, 17
     xbnds = np.linspace(-1.875, 358.125, nx, endpoint=True)
@@ -413,7 +382,7 @@ def test_pcolormesh_global_with_wrap3():
 
 @pytest.mark.natural_earth
 @pytest.mark.mpl_image_compare(filename='pcolormesh_global_wrap3.png',
-                               tolerance=1.39)
+                               tolerance=1.42)
 def test_pcolormesh_set_array_with_mask():
     """Testing that set_array works with masked arrays properly."""
     nx, ny = 33, 17
@@ -464,7 +433,7 @@ def test_pcolormesh_set_array_with_mask():
 
 @pytest.mark.natural_earth
 @pytest.mark.mpl_image_compare(filename='pcolormesh_global_wrap3.png',
-                               tolerance=1.39)
+                               tolerance=1.42)
 def test_pcolormesh_set_clim_with_mask():
     """Testing that set_clim works with masked arrays properly."""
     nx, ny = 33, 17
